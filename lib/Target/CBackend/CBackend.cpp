@@ -21,7 +21,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Target/TargetLowering.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include <algorithm>
 #include <cstdio>
 

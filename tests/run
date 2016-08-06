@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly BIN="$1"
+readonly scriptDir=$(dirname $0)
+
+readonly tmpDir=/tmp/llvm-cbe-test-$$
+trap "rm -rf $tmpDir" EXIT
+mkdir -p $tmpDir
+
+function main
+{
+  runTest compile_test cyclic_structures.ll
+  #runTest compile_test string_literal.ll
+}
+
+function runTest
+{
+  echo "Test: $*"
+  if ! "$@" ; then
+    echo "Failure"
+    return 1
+  fi
+}
+
+function compile_test
+{
+  if ! $BIN/llvm-cbe $scriptDir/$1 -o=$tmpDir/output.c ; then
+    echo "C generation failed"
+    return 1
+  fi
+
+  if ! gcc -w -O0 -c $tmpDir/output.c -o $tmpDir/output.o ; then
+    echo "The resulting program isn't compilable"
+    cat $tmpDir/output.c | sed "s/^/  /" | grep -n "" | sed "s/^/> /"
+    return 1
+  fi
+}
+
+main "$@"
+

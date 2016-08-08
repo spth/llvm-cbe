@@ -12,7 +12,7 @@ mkdir -p $tmpDir
 function main
 {
   runTest compile_test cyclic_structures.ll
-  #runTest compile_test string_literal.ll
+  runTest compile_test string_literal.ll
 }
 
 function runTest

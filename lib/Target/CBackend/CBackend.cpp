@@ -1994,10 +1994,11 @@ void CWriter::generateHeader(Module &M) {
 
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
+    std::set<GlobalVariable*> vars;
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
     for (auto it = M.global_begin(), E = M.global_end(); it != E; ++it) {
       auto I = &(*it);
-      declareOneGlobalVariable(I);
+      declareOneGlobalVariable(I, vars);
     }
   }
 
@@ -2580,13 +2581,27 @@ void CWriter::generateHeader(Module &M) {
     Out << "\n\n/* Function Bodies */\n";
 }
 
-void CWriter::declareOneGlobalVariable(GlobalVariable* I) {
+void CWriter::declareGlobalsFromOperand(Value *Operand, std::set<GlobalVariable*>& VarsPrinted) {
+  if (auto gv = dyn_cast<GlobalVariable>(Operand)) {
+    declareOneGlobalVariable(gv, VarsPrinted);
+  }
+}
+
+void CWriter::declareOneGlobalVariable(GlobalVariable* I, std::set<GlobalVariable*>& VarsPrinted) {
+
+  if (!VarsPrinted.insert(I).second)
+    return;
+
   if (I->isDeclaration() || isEmptyType(I->getType()->getPointerElementType()))
     return;
 
   // Ignore special globals, such as debug info.
   if (getGlobalVariableClass(I))
     return;
+
+  if (!I->getInitializer()->isNullValue()) {
+    declareGlobalsFromOperand(I->getInitializer(), VarsPrinted);
+  }
 
   if (I->hasDLLImportStorageClass())
     Out << "__declspec(dllimport) ";

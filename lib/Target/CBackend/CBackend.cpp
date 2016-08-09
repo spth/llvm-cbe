@@ -25,23 +25,12 @@
 #include <algorithm>
 #include <cstdio>
 
-#include <iostream>
-
-//#include "Graph.h"
-//#include "PHINodePass.h"
-
-//Jackson Korba 9/29/14
-#ifndef DEBUG_TYPE
-#define DEBUG_TYPE ""
-#endif
-//End Modification
-
 // Some ms header decided to define setjmp as _setjmp, undo this for this file
 // since we don't need it
-#ifdef setjmp
 #undef setjmp
-#endif
+
 using namespace llvm;
+using std::string;
 
 extern "C" void LLVMInitializeCBackendTarget() {
   // Register the target.
@@ -155,8 +144,8 @@ bool CWriter::runOnFunction(Function &F) {
   return true; // may have lowered an IntrinsicCall
 }
 
-static std::string CBEMangle(const std::string &S) {
-  std::string Result;
+static string CBEMangle(const string &S) {
+  string Result;
 
   for (unsigned i = 0, e = S.size(); i != e; ++i)
     if (isalnum(S[i]) || S[i] == '_') {
@@ -234,7 +223,7 @@ CWriter::printTypeString(raw_ostream &Out, Type *Ty, bool isSigned) {
   }
 }
 
-std::string CWriter::getStructName(StructType *ST) {
+string CWriter::getStructName(StructType *ST) {
   assert(ST->getNumElements() != 0);
   if (!ST->isLiteral() && !ST->getName().empty())
     return "struct l_struct_" + CBEMangle(ST->getName().str());
@@ -245,15 +234,15 @@ std::string CWriter::getStructName(StructType *ST) {
   return "struct l_unnamed_" + utostr(id);
 }
 
-std::string CWriter::getFunctionName(FunctionType *FT, std::pair<AttributeSet, CallingConv::ID> PAL) {
+string CWriter::getFunctionName(FunctionType *FT, std::pair<AttributeSet, CallingConv::ID> PAL) {
   unsigned &id = UnnamedFunctionIDs[std::make_pair(FT, PAL)];
   if (id == 0)
       id = ++NextFunctionNumber;
   return "l_fptr_" + utostr(id);
 }
 
-std::string CWriter::getArrayName(ArrayType *AT) {
-    std::string astr;
+string CWriter::getArrayName(ArrayType *AT) {
+    string astr;
     raw_string_ostream ArrayInnards(astr);
     // Arrays are wrapped in structs to allow them to have normal
     // value semantics (avoiding the array "decay").
@@ -262,8 +251,8 @@ std::string CWriter::getArrayName(ArrayType *AT) {
     return "struct l_array_" + utostr(AT->getNumElements()) + '_' + CBEMangle(ArrayInnards.str());
 }
 
-std::string CWriter::getVectorName(VectorType *VT, bool Aligned) {
-    std::string astr;
+string CWriter::getVectorName(VectorType *VT, bool Aligned) {
+    string astr;
     raw_string_ostream VectorInnards(astr);
     // Vectors are handled like arrays
     assert(!isEmptyType(VT));
@@ -274,7 +263,7 @@ std::string CWriter::getVectorName(VectorType *VT, bool Aligned) {
 }
 
 
-static const std::string getCmpPredicateName(CmpInst::Predicate P) {
+static const string getCmpPredicateName(CmpInst::Predicate P) {
   switch (P) {
   case FCmpInst::FCMP_FALSE: return "0";
   case FCmpInst::FCMP_OEQ: return "oeq";
@@ -444,7 +433,7 @@ raw_ostream &CWriter::printFunctionDeclaration(raw_ostream &Out, FunctionType *T
 
 raw_ostream &CWriter::printFunctionProto(raw_ostream &Out, FunctionType *FTy,
                                          std::pair<AttributeSet, CallingConv::ID> Attrs,
-                                         const std::string &Name,
+                                         const string &Name,
                                          Function::ArgumentListType *ArgList) {
   AttributeSet &PAL = Attrs.first;
 
@@ -634,8 +623,8 @@ bool CWriter::printConstantString(Constant *C, enum OperandContext Context) {
 //
 
 // TODO copied from CppBackend, new code should use raw_ostream
-static inline std::string ftostr(const APFloat& V) {
-  std::string Buf;
+static inline string ftostr(const APFloat& V) {
+  string Buf;
   if (&V.getSemantics() == &APFloat::IEEEdouble) {
     raw_string_ostream(Buf) << V.convertToDouble();
     return Buf;
@@ -664,7 +653,7 @@ static bool isFPCSafeToPrint(const ConstantFP *CFP) {
     return APF.bitwiseIsEqual(APFloat(atof(Buffer)));
   return false;
 #else
-  std::string StrVal = ftostr(APF);
+  string StrVal = ftostr(APF);
 
   while (StrVal[0] == ' ')
     StrVal.erase(StrVal.begin());
@@ -998,7 +987,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
         uint64_t ll = DoubleToBits(V);
         sprintf(Buffer, "0x%llx", static_cast<long long>(ll));
 
-        std::string Num(&Buffer[0], &Buffer[6]);
+        string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);
 
         if (FPC->getType() == Type::getFloatTy(FPC->getContext()))
@@ -1014,7 +1003,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
             (FPC->getType() == Type::getFloatTy(FPC->getContext()) ? "F" : "")
             << " /*inf*/ ";
       } else {
-        std::string Num;
+        string Num;
 #if HAVE_PRINTF_A && ENABLE_CBE_PRINTF_A
         // Print out the constant as a floating point number.
         char Buffer[100];
@@ -1221,14 +1210,14 @@ void CWriter::printConstantWithCast(Constant* CPV, unsigned Opcode) {
     printConstant(CPV, ContextCasted);
 }
 
-std::string CWriter::GetValueName(Value *Operand) {
+string CWriter::GetValueName(Value *Operand) {
 
   // Resolve potential alias.
   if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Operand)) {
     Operand = GA->getAliasee();
   }
 
-  std::string Name = Operand->getName();
+  string Name = Operand->getName();
   if (Name.empty()) { // Assign unique names to local temporaries.
     unsigned &No = AnonValueNumbers[Operand];
     if (No == 0)
@@ -1241,10 +1230,10 @@ std::string CWriter::GetValueName(Value *Operand) {
     return CBEMangle(Name);
   }
 
-  std::string VarName;
+  string VarName;
   VarName.reserve(Name.capacity());
 
-  for (std::string::iterator I = Name.begin(), E = Name.end();
+  for (string::iterator I = Name.begin(), E = Name.end();
        I != E; ++I) {
     unsigned char ch = *I;
 
@@ -1718,7 +1707,7 @@ static void PrintEscapedString(const char *Str, unsigned Length,
 
 // PrintEscapedString - Print each character of the specified string, escaping
 // it if it is not printable or if it is an escape char.
-static void PrintEscapedString(const std::string &Str, raw_ostream &Out) {
+static void PrintEscapedString(const string &Str, raw_ostream &Out) {
   PrintEscapedString(Str.c_str(), Str.size(), Out);
 }
 
@@ -1730,11 +1719,11 @@ bool CWriter::doInitialization(Module &M) {
   IL->AddPrototypes(M);
 
 #if 0
-  std::string Triple = TheModule->getTargetTriple();
+  string Triple = TheModule->getTargetTriple();
   if (Triple.empty())
     Triple = llvm::sys::getDefaultTargetTriple();
 
-  std::string E;
+  string E;
   if (const Target *Match = TargetRegistry::lookupTarget(Triple, E))
     TAsm = Match->createMCAsmInfo(Triple);
 #endif
@@ -1746,10 +1735,10 @@ bool CWriter::doInitialization(Module &M) {
 
 bool CWriter::doFinalization(Module &M) {
   // Output all code to the file
-  std::string methods = Out.str();
+  string methods = Out.str();
   _Out.clear();
   generateHeader(M);
-  std::string header = Out.str();
+  string header = Out.str();
   _Out.clear();
   FileOut << header << methods;
 
@@ -1830,21 +1819,21 @@ void CWriter::generateHeader(Module &M) {
         << "__asm__ (";
 
     // Split the string into lines, to make it easier to read the .ll file.
-    std::string Asm = M.getModuleInlineAsm();
+    string Asm = M.getModuleInlineAsm();
     size_t CurPos = 0;
     size_t NewLine = Asm.find_first_of('\n', CurPos);
-    while (NewLine != std::string::npos) {
+    while (NewLine != string::npos) {
       // We found a newline, print the portion of the asm string from the
       // last newline up to this newline.
       Out << "\"";
-      PrintEscapedString(std::string(Asm.begin()+CurPos, Asm.begin()+NewLine),
+      PrintEscapedString(string(Asm.begin()+CurPos, Asm.begin()+NewLine),
                          Out);
       Out << "\\n\"\n";
       CurPos = NewLine+1;
       NewLine = Asm.find_first_of('\n', CurPos);
     }
     Out << "\"";
-    PrintEscapedString(std::string(Asm.begin()+CurPos, Asm.end()), Out);
+    PrintEscapedString(string(Asm.begin()+CurPos, Asm.end()), Out);
     Out << "\");\n"
         << "/* End Module asm statements */\n";
   }
@@ -3108,7 +3097,7 @@ void CWriter::printPHICopiesForSuccessor (BasicBlock *CurBlock,
     // Now we have to do the printing.
     Value *IV = PN->getIncomingValueForBlock(CurBlock);
     if (!isa<UndefValue>(IV) && !isEmptyType(IV->getType())) {
-      Out << std::string(Indent, ' ');
+      Out << string(Indent, ' ');
       Out << "  " << GetValueName(I) << "__PHI_TEMPORARY = ";
       writeOperand(IV, ContextCasted);
       Out << ";   /* for PHI node */\n";
@@ -3119,7 +3108,7 @@ void CWriter::printPHICopiesForSuccessor (BasicBlock *CurBlock,
 void CWriter::printBranchToBlock(BasicBlock *CurBB, BasicBlock *Succ,
                                  unsigned Indent) {
   if (isGotoCodeNecessary(CurBB, Succ)) {
-    Out << std::string(Indent, ' ') << "  goto ";
+    Out << string(Indent, ' ') << "  goto ";
     writeOperand(Succ);
     Out << ";\n";
   }
@@ -3483,7 +3472,7 @@ static bool isSupportedIntegerSize(IntegerType &T) {
 #endif
 
 void CWriter::printIntrinsicDefinition(FunctionType *funT,
-        unsigned Opcode, std::string OpName, raw_ostream &Out) {
+        unsigned Opcode, string OpName, raw_ostream &Out) {
   Type *retT = funT->getReturnType();
   Type *elemT = funT->getParamType(0);
   IntegerType *elemIntT = dyn_cast<IntegerType>(elemT);
@@ -3723,7 +3712,7 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT,
 void CWriter::printIntrinsicDefinition(Function &F, raw_ostream &Out) {
   FunctionType *funT = F.getFunctionType();
   unsigned Opcode = F.getIntrinsicID();
-  std::string OpName = GetValueName(&F);
+  string OpName = GetValueName(&F);
   printIntrinsicDefinition(funT, Opcode, OpName, Out);
 }
 
@@ -4083,7 +4072,7 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID) {
 //TODO: work out platform independent constraints and factor those out
 //      of the per target tables
 //      handle multiple constraint codes
-std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
+string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
     return TargetLowering::AsmOperandInfo(c).ConstraintCode;
 #if 0
   assert(c.Codes.size() == 1 && "Too many asm constraint codes to handle");
@@ -4091,11 +4080,11 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
   // Grab the translation table from MCAsmInfo if it exists.
   const MCRegisterInfo *MRI;
   const MCAsmInfo *TargetAsm;
-  std::string Triple = TheModule->getTargetTriple();
+  string Triple = TheModule->getTargetTriple();
   if (Triple.empty())
     Triple = llvm::sys::getDefaultTargetTriple();
 
-  std::string E;
+  string E;
   if (const Target *Match = TargetRegistry::lookupTarget(Triple, E)) {
     MRI = Match->createMCRegInfo(Triple);
     TargetAsm = Match->createMCAsmInfo(*MRI, Triple);
@@ -4121,17 +4110,17 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
 }
 
 //TODO: import logic from AsmPrinter.cpp
-static std::string gccifyAsm(std::string asmstr) {
-  for (std::string::size_type i = 0; i != asmstr.size(); ++i)
+static string gccifyAsm(string asmstr) {
+  for (string::size_type i = 0; i != asmstr.size(); ++i)
     if (asmstr[i] == '\n')
       asmstr.replace(i, 1, "\\n");
     else if (asmstr[i] == '\t')
       asmstr.replace(i, 1, "\\t");
     else if (asmstr[i] == '$') {
       if (asmstr[i + 1] == '{') {
-        std::string::size_type a = asmstr.find_first_of(':', i + 1);
-        std::string::size_type b = asmstr.find_first_of('}', i + 1);
-        std::string n = "%" +
+        string::size_type a = asmstr.find_first_of(':', i + 1);
+        string::size_type b = asmstr.find_first_of('}', i + 1);
+        string n = "%" +
           asmstr.substr(a + 1, b - a - 1) +
           asmstr.substr(i + 2, a - i - 2);
         asmstr.replace(i, b - i + 1, n);
@@ -4178,7 +4167,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
     }
 
     assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
+    string C = InterpretASMConstraint(*I);
     if (C.empty()) continue;
 
     if (!IsFirst) {
@@ -4219,7 +4208,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
     }
 
     assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
+    string C = InterpretASMConstraint(*I);
     if (C.empty()) continue;
 
     if (!IsFirst) {
@@ -4246,7 +4235,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
       continue;  // Ignore non-input constraints.
 
     assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
+    string C = InterpretASMConstraint(*I);
     if (C.empty()) continue;
 
     if (!IsFirst) {

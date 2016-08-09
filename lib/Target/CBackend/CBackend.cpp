@@ -403,8 +403,7 @@ raw_ostream &CWriter::printStructDeclaration(raw_ostream &Out, StructType *STy) 
     Out << "#ifdef _MSC_VER\n#pragma pack(push, 1)\n#endif\n";
   Out << getStructName(STy) << " {\n";
   unsigned Idx = 0;
-  for (StructType::element_iterator I = STy->element_begin(),
-         E = STy->element_end(); I != E; ++I, Idx++) {
+  for (auto I = STy->element_begin(), E = STy->element_end(); I != E; ++I, Idx++) {
     Out << "  ";
     bool empty = isEmptyType(*I);
     if (empty)
@@ -946,7 +945,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
   case Type::PPC_FP128TyID:
   case Type::FP128TyID: {
     ConstantFP *FPC = cast<ConstantFP>(CPV);
-    std::map<const ConstantFP*, unsigned>::iterator I = FPConstantMap.find(FPC);
+    auto I = FPConstantMap.find(FPC);
     if (I != FPConstantMap.end()) {
       // Because of FP precision problems we must load from a stack allocated
       // value that holds the value in hex.
@@ -1233,8 +1232,7 @@ string CWriter::GetValueName(Value *Operand) {
   string VarName;
   VarName.reserve(Name.capacity());
 
-  for (string::iterator I = Name.begin(), E = Name.end();
-       I != E; ++I) {
+  for (auto I = Name.begin(), E = Name.end(); I != E; ++I) {
     unsigned char ch = *I;
 
     if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
@@ -1775,8 +1773,7 @@ void CWriter::generateHeader(Module &M) {
   // Keep track of which functions are static ctors/dtors so they can have
   // an attribute added to their prototypes.
   std::set<Function*> StaticCtors, StaticDtors;
-  for (Module::global_iterator it = M.global_begin(), E = M.global_end();
-       it != E; ++it) {
+  for (auto it = M.global_begin(), E = M.global_end(); it != E; ++it) {
     auto I = &*it;
     switch (getGlobalVariableClass(I)) {
     default: break;
@@ -1994,8 +1991,7 @@ void CWriter::generateHeader(Module &M) {
   // Alias declarations...
   if (!M.alias_empty()) {
     Out << "\n/* External Alias Declarations */\n";
-    for (Module::alias_iterator I = M.alias_begin(), E = M.alias_end();
-         I != E; ++I) {
+    for (auto I = M.alias_begin(), E = M.alias_end(); I != E; ++I) {
       assert(!I->isDeclaration() && !isEmptyType(I->getType()->getPointerElementType()));
       if (I->hasLocalLinkage())
         continue; // Internal Global
@@ -2067,8 +2063,7 @@ void CWriter::generateHeader(Module &M) {
   Out << "return 1; }\n";
 
   // Loop over all select operations
-  for (std::set<Type*>::iterator it = SelectDeclTypes.begin(), end = SelectDeclTypes.end();
-       it != end; ++it) {
+  for (auto it = SelectDeclTypes.begin(), end = SelectDeclTypes.end(); it != end; ++it) {
     // static __forceinline Rty llvm_select_u8x4(<bool x 4> condition, <u8 x 4> iftrue, <u8 x 4> ifnot) {
     //   Rty r = {
     //     condition[0] ? iftrue[0] : ifnot[0],
@@ -2107,8 +2102,7 @@ void CWriter::generateHeader(Module &M) {
   }
 
   // Loop over all compare operations
-  for (std::set< std::pair<CmpInst::Predicate, VectorType*> >::iterator it = CmpDeclTypes.begin(), end = CmpDeclTypes.end();
-       it != end; ++it) {
+  for (auto it = CmpDeclTypes.begin(), end = CmpDeclTypes.end(); it != end; ++it) {
     // static __forceinline <bool x 4> llvm_icmp_ge_u8x4(<u8 x 4> l, <u8 x 4> r) {
     //   Rty c = {
     //     l[0] >= r[0],
@@ -2166,8 +2160,7 @@ void CWriter::generateHeader(Module &M) {
   }
 
   // Loop over all (vector) cast operations
-  for (std::set<std::pair<CastInst::CastOps, std::pair<Type*, Type*>>>::iterator it = CastOpDeclTypes.begin(), end = CastOpDeclTypes.end();
-       it != end; ++it) {
+  for (auto it = CastOpDeclTypes.begin(), end = CastOpDeclTypes.end(); it != end; ++it) {
     // static __forceinline <u32 x 4> llvm_ZExt_u8x4_u32x4(<u8 x 4> in) { // Src->isVector == Dst->isVector
     //   Rty out = {
     //     in[0],
@@ -2261,8 +2254,7 @@ void CWriter::generateHeader(Module &M) {
   }
 
   // Loop over all simple vector operations
-  for (std::set<std::pair<unsigned, Type*>>::iterator it = InlineOpDeclTypes.begin(), end = InlineOpDeclTypes.end();
-       it != end; ++it) {
+  for (auto it = InlineOpDeclTypes.begin(), end = InlineOpDeclTypes.end(); it != end; ++it) {
     // static __forceinline <u32 x 4> llvm_BinOp_u32x4(<u32 x 4> a, <u32 x 4> b) {
     //   Rty r = {
     //      a[0] OP b[0],
@@ -2509,8 +2501,7 @@ void CWriter::generateHeader(Module &M) {
   }
 
   // Loop over all inline constructors
-  for (std::set<Type*>::iterator it = CtorDeclTypes.begin(), end = CtorDeclTypes.end();
-       it != end; ++it) {
+  for (auto it = CtorDeclTypes.begin(), end = CtorDeclTypes.end(); it != end; ++it) {
     // static __forceinline <u32 x 4> llvm_ctor_u32x4(u32 x1, u32 x2, u32 x3, u32 x4) {
     //   Rty r = {
     //     x1, x2, x3, x4
@@ -2560,9 +2551,7 @@ void CWriter::generateHeader(Module &M) {
   }
 
   // Emit definitions of the intrinsics.
-  for (SmallVector<Function*, 16>::iterator
-       I = intrinsicsToDefine.begin(),
-       E = intrinsicsToDefine.end(); I != E; ++I) {
+  for (auto I = intrinsicsToDefine.begin(), E = intrinsicsToDefine.end(); I != E; ++I) {
     printIntrinsicDefinition(**I, Out);
   }
 
@@ -2768,9 +2757,7 @@ void CWriter::printModuleTypes(raw_ostream &Out) {
 
   Out << "\n/* Function definitions */\n";
 
-  for (DenseMap<std::pair<FunctionType*, std::pair<AttributeSet, CallingConv::ID> >, unsigned>::iterator
-       I = UnnamedFunctionIDs.begin(), E = UnnamedFunctionIDs.end();
-       I != E; ++I) {
+  for (auto I = UnnamedFunctionIDs.begin(), E = UnnamedFunctionIDs.end(); I != E; ++I) {
     Out << '\n';
     std::pair<FunctionType*, std::pair<AttributeSet, CallingConv::ID> > F = I->first;
     if (F.second.first == AttributeSet() && F.second.second == CallingConv::C)
@@ -2780,9 +2767,7 @@ void CWriter::printModuleTypes(raw_ostream &Out) {
 
   // We may have collected some intrinsic prototypes to emit.
   // Emit them now, before the function that uses them is emitted
-  for (std::vector<Function*>::iterator
-       I = prototypesToGen.begin(), E = prototypesToGen.end();
-       I != E; ++I) {
+  for (auto I = prototypesToGen.begin(), E = prototypesToGen.end(); I != E; ++I) {
     Out << '\n';
     Function *F = *I;
     printFunctionProto(Out, F);
@@ -2827,8 +2812,7 @@ void CWriter::printContainedTypes(raw_ostream &Out, Type *Ty,
   if (isEmptyType(Ty)) return;
 
   // Print all contained types first.
-  for (Type::subtype_iterator I = Ty->subtype_begin(),
-       E = Ty->subtype_end(); I != E; ++I)
+  for (Type::subtype_iterator I = Ty->subtype_begin(), E = Ty->subtype_end(); I != E; ++I)
     printContainedTypes(Out, *I, TypesPrinted);
 
   if (StructType *ST = dyn_cast<StructType>(Ty)) {
@@ -4158,8 +4142,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
   bool IsFirst = true;
 
   // Convert over all the output constraints.
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
+  for (auto I = Constraints.begin(), E = Constraints.end(); I != E; ++I) {
 
     if (I->Type != InlineAsm::isOutput) {
       ++ValueCount;
@@ -4200,8 +4183,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
   Out << "\n        :";
   IsFirst = true;
   ValueCount = 0;
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
+  for (auto I = Constraints.begin(), E = Constraints.end(); I != E; ++I) {
     if (I->Type != InlineAsm::isInput) {
       ++ValueCount;
       continue;  // Ignore non-input constraints.
@@ -4229,8 +4211,7 @@ void CWriter::visitInlineAsm(CallInst &CI) {
 
   // Convert over the clobber constraints.
   IsFirst = true;
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
+  for (auto I = Constraints.begin(), E = Constraints.end(); I != E; ++I) {
     if (I->Type != InlineAsm::isClobber)
       continue;  // Ignore non-input constraints.
 

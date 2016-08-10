@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly scriptDir=$(dirname $0)
+
+readonly tmpDir=/tmp/coverage-llvm-cbe-$$
+rm -rf $tmpDir
+mkdir -p $tmpDir
+
+export BIN=$tmpDir
+export CXXFLAGS="--coverage -fprofile-arcs"
+export LDFLAGS="--coverage"
+make -j`nproc`
+
+$scriptDir/run "$tmpDir"
+
+lcov --capture -d "$tmpDir/lib" -b lib --no-external  > $tmpDir/profile.txt
+rm -rf cov
+genhtml $tmpDir/profile.txt -o cov
+rm -rf "$tmpDir"
+

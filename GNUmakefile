@@ -7,8 +7,8 @@ SRCS:=\
 
 OBJS:=$(SRCS:%.cpp=$(BIN)/%.o)
 
-FLAGS:=$(shell llvm-config --cflags || echo --llvm-was-not-found)
-FLAGS+=-fno-rtti
+CXXFLAGS+=$(shell llvm-config --cflags || echo --llvm-was-not-found)
+CXXFLAGS+=-fno-rtti
 LIBDIR:=$(shell llvm-config --libdir)
 LIBS:=$(shell llvm-config --libs --system-libs || echo --llvm-was-not-found)
 
@@ -19,9 +19,9 @@ clean:
 
 $(BIN)/llvm-cbe: $(OBJS)
 	@mkdir -p $(dir $@)
-	$(CXX) -o "$@" $^ -L $(LIBDIR) $(LIBS)
+	$(CXX) -o "$@" $^ -L $(LIBDIR) $(LIBS) $(LDFLAGS)
 
 $(BIN)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) -std=c++14 -o "$@" -c $(FLAGS) $<
+	$(CXX) -std=c++14 -o "$@" -c $(CXXFLAGS) $<
 

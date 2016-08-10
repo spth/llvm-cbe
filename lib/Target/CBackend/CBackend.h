@@ -48,27 +48,27 @@ namespace {
     std::string _Out;
     raw_string_ostream Out;
     raw_pwrite_stream &FileOut;
-    IntrinsicLowering *IL;
-    LoopInfo *LI;
-    const Module *TheModule;
-    const MCAsmInfo* TAsm;
-    const MCRegisterInfo *MRI;
-    const MCObjectFileInfo *MOFI;
-    MCContext *TCtx;
-    const DataLayout* TD;
+    IntrinsicLowering *IL = nullptr;
+    LoopInfo *LI = nullptr;
+    const Module *TheModule = nullptr;
+    const MCAsmInfo* TAsm = nullptr;
+    const MCRegisterInfo *MRI = nullptr;
+    const MCObjectFileInfo *MOFI = nullptr;
+    MCContext *TCtx = nullptr;
+    const DataLayout* TD = nullptr;
 
     std::map<const ConstantFP *, unsigned> FPConstantMap;
     std::set<const Argument*> ByValParams;
-    unsigned FPCounter;
-    unsigned OpaqueCounter;
+    unsigned FPCounter = 0;
+    unsigned OpaqueCounter = 0;
 
     DenseMap<const Value*, unsigned> AnonValueNumbers;
-    unsigned NextAnonValueNumber;
+    unsigned NextAnonValueNumber = 0;
 
     /// UnnamedStructIDs - This contains a unique ID for each struct that is
     /// either anonymous or has no name.
     DenseMap<StructType*, unsigned> UnnamedStructIDs;
-    unsigned NextAnonStructNumber;
+    unsigned NextAnonStructNumber = 0;
 
     std::set<Type*> TypedefDeclTypes;
     std::set<Type*> SelectDeclTypes;
@@ -78,7 +78,7 @@ namespace {
     std::set<Type*> CtorDeclTypes;
 
     DenseMap<std::pair<FunctionType*, std::pair<AttributeSet, CallingConv::ID>>, unsigned> UnnamedFunctionIDs;
-    unsigned NextFunctionNumber;
+    unsigned NextFunctionNumber = 0;
 
     // This is used to keep track of intrinsics that get generated to a lowered
     // function. We must generate the prototypes before the function body which
@@ -88,11 +88,7 @@ namespace {
   public:
     static char ID;
     explicit CWriter(raw_pwrite_stream &o)
-      : FunctionPass(ID), Out(_Out), FileOut(o), IL(0), LI(0),
-        TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
-        OpaqueCounter(0), NextAnonValueNumber(0),
-        NextAnonStructNumber(0), NextFunctionNumber(0) {
-      FPCounter = 0;
+      : FunctionPass(ID), Out(_Out), FileOut(o) {
     }
 
     virtual const char *getPassName() const { return "C backend"; }

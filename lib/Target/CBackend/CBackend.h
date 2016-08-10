@@ -85,6 +85,8 @@ namespace {
     // will only be expanded on first use
     std::vector<Function*> prototypesToGen;
 
+    std::set<GlobalVariable*> globalScope;
+
   public:
     static char ID;
     explicit CWriter(raw_pwrite_stream &o)
@@ -105,8 +107,8 @@ namespace {
   private:
 
     void generateHeader(Module &M);
-    void declareGlobalsFromOperand(Value *Operand, std::set<GlobalVariable*>& VarsPrinted);
-    void declareOneGlobalVariable(GlobalVariable* I, std::set<GlobalVariable*>& VarsPrinted);
+    void declareGlobalsFromOperand(Value *Operand);
+    void declareOneGlobalVariable(GlobalVariable* I);
 
     void forwardDeclareStructs(raw_ostream &Out, Type *Ty, std::set<Type*> &TypesPrinted);
     void forwardDeclareFunctionTypedefs(raw_ostream &Out, Type *Ty, std::set<Type*> &TypesPrinted);

@@ -1984,7 +1984,7 @@ void CWriter::generateHeader(Module &M) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
     for (auto it = M.global_begin(), E = M.global_end(); it != E; ++it) {
       auto I = &(*it);
-      declareOneGlobalVariable(I, vars);
+      declareOneGlobalVariable(I);
     }
   }
 
@@ -2559,15 +2559,15 @@ void CWriter::generateHeader(Module &M) {
     Out << "\n\n/* Function Bodies */\n";
 }
 
-void CWriter::declareGlobalsFromOperand(Value *Operand, std::set<GlobalVariable*>& VarsPrinted) {
+void CWriter::declareGlobalsFromOperand(Value *Operand) {
   if (auto gv = dyn_cast<GlobalVariable>(Operand)) {
-    declareOneGlobalVariable(gv, VarsPrinted);
+    declareOneGlobalVariable(gv);
   }
 }
 
-void CWriter::declareOneGlobalVariable(GlobalVariable* I, std::set<GlobalVariable*>& VarsPrinted) {
+void CWriter::declareOneGlobalVariable(GlobalVariable* I) {
 
-  if (!VarsPrinted.insert(I).second)
+  if (!globalScope.insert(I).second)
     return;
 
   if (I->isDeclaration() || isEmptyType(I->getType()->getPointerElementType()))
@@ -2578,7 +2578,7 @@ void CWriter::declareOneGlobalVariable(GlobalVariable* I, std::set<GlobalVariabl
     return;
 
   if (!I->getInitializer()->isNullValue()) {
-    declareGlobalsFromOperand(I->getInitializer(), VarsPrinted);
+    declareGlobalsFromOperand(I->getInitializer());
   }
 
   if (I->hasDLLImportStorageClass())

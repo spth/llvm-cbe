@@ -1850,8 +1850,8 @@ void CWriter::generateHeader(Module &M) {
   // Global variable declarations...
   if (!M.global_empty()) {
     Out << "\n/* External Global Variable Declarations */\n";
-    for (auto it = M.global_begin(), E = M.global_end(); it != E; ++it) {
-      auto I = &(*it);
+    for (auto& gv : M.globals()) {
+      auto I = &gv;
 
       if (!I->isDeclaration() || isEmptyType(I->getType()->getPointerElementType()))
         continue;
@@ -1982,9 +1982,8 @@ void CWriter::generateHeader(Module &M) {
   if (!M.global_empty()) {
     std::set<GlobalVariable*> vars;
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
-    for (auto it = M.global_begin(), E = M.global_end(); it != E; ++it) {
-      auto I = &(*it);
-      declareOneGlobalVariable(I);
+    for (auto& I : M.globals()) {
+      declareOneGlobalVariable(&I);
     }
   }
 

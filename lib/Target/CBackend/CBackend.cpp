@@ -1853,7 +1853,7 @@ void CWriter::generateHeader(Module &M) {
     for (auto& gv : M.globals()) {
       auto I = &gv;
 
-      if (!I->isDeclaration() || isEmptyType(I->getType()->getPointerElementType()))
+      if (isEmptyType(I->getType()->getPointerElementType()))
         continue;
 
       if (I->hasDLLImportStorageClass())

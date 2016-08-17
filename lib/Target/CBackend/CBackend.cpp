@@ -1981,10 +1981,13 @@ void CWriter::generateHeader(Module &M) {
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     std::set<GlobalVariable*> vars;
+    Out << "\n\n/* Global Variable Declarations*/\n";
+    for (auto& I : M.globals())
+      declareOneGlobalVariable(&I, false);
+
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
-    for (auto& I : M.globals()) {
-      declareOneGlobalVariable(&I);
-    }
+    for (auto& I : M.globals())
+      declareOneGlobalVariable(&I, true);
   }
 
   // Alias declarations...
@@ -2558,16 +2561,7 @@ void CWriter::generateHeader(Module &M) {
     Out << "\n\n/* Function Bodies */\n";
 }
 
-void CWriter::declareGlobalsFromOperand(Value *Operand) {
-  if (auto gv = dyn_cast<GlobalVariable>(Operand)) {
-    declareOneGlobalVariable(gv);
-  }
-}
-
-void CWriter::declareOneGlobalVariable(GlobalVariable* I) {
-
-  if (!globalScope.insert(I).second)
-    return;
+void CWriter::declareOneGlobalVariable(GlobalVariable* I, bool withInitializer) {
 
   if (I->isDeclaration() || isEmptyType(I->getType()->getPointerElementType()))
     return;
@@ -2575,10 +2569,6 @@ void CWriter::declareOneGlobalVariable(GlobalVariable* I) {
   // Ignore special globals, such as debug info.
   if (getGlobalVariableClass(I))
     return;
-
-  if (!I->getInitializer()->isNullValue()) {
-    declareGlobalsFromOperand(I->getInitializer());
-  }
 
   if (I->hasDLLImportStorageClass())
     Out << "__declspec(dllimport) ";
@@ -2612,30 +2602,33 @@ void CWriter::declareOneGlobalVariable(GlobalVariable* I) {
   if (I->hasHiddenVisibility())
     Out << " __HIDDEN__";
 
-  // If the initializer is not null, emit the initializer.  If it is null,
-  // we try to avoid emitting large amounts of zeros.  The problem with
-  // this, however, occurs when the variable has weak linkage.  In this
-  // case, the assembler will complain about the variable being both weak
-  // and common, so we disable this optimization.
-  // FIXME common linkage should avoid this problem.
-  if (!I->getInitializer()->isNullValue()) {
-    Out << " = " ;
-    writeOperand(I->getInitializer(), ContextStatic);
-  } else if (I->hasWeakLinkage()) {
-    // We have to specify an initializer, but it doesn't have to be
-    // complete.  If the value is an aggregate, print out { 0 }, and let
-    // the compiler figure out the rest of the zeros.
-    Out << " = " ;
-    if (I->getInitializer()->getType()->isStructTy() ||
-        I->getInitializer()->getType()->isVectorTy()) {
-      Out << "{ 0 }";
-    } else if (I->getInitializer()->getType()->isArrayTy()) {
-      // As with structs and vectors, but with an extra set of braces
-      // because arrays are wrapped in structs.
-      Out << "{ { 0 } }";
-    } else {
-      // Just print it out normally.
+  if(withInitializer)
+  {
+    // If the initializer is not null, emit the initializer.  If it is null,
+    // we try to avoid emitting large amounts of zeros.  The problem with
+    // this, however, occurs when the variable has weak linkage.  In this
+    // case, the assembler will complain about the variable being both weak
+    // and common, so we disable this optimization.
+    // FIXME common linkage should avoid this problem.
+    if (!I->getInitializer()->isNullValue()) {
+      Out << " = " ;
       writeOperand(I->getInitializer(), ContextStatic);
+    } else if (I->hasWeakLinkage()) {
+      // We have to specify an initializer, but it doesn't have to be
+      // complete.  If the value is an aggregate, print out { 0 }, and let
+      // the compiler figure out the rest of the zeros.
+      Out << " = " ;
+      if (I->getInitializer()->getType()->isStructTy() ||
+          I->getInitializer()->getType()->isVectorTy()) {
+        Out << "{ 0 }";
+      } else if (I->getInitializer()->getType()->isArrayTy()) {
+        // As with structs and vectors, but with an extra set of braces
+        // because arrays are wrapped in structs.
+        Out << "{ { 0 } }";
+      } else {
+        // Just print it out normally.
+        writeOperand(I->getInitializer(), ContextStatic);
+      }
     }
   }
   Out << ";\n";

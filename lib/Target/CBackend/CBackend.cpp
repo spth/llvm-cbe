@@ -2832,6 +2832,12 @@ void CWriter::printFunction(Function &F) {
   /// isStructReturn - Should this function actually return a struct by-value?
   bool isStructReturn = F.hasStructRetAttr();
 
+  // keep track of all the byVal arguments
+  for(auto& arg : F.getArgumentList()) {
+    if(arg.hasByValAttr())
+      ByValParams.insert(&arg);
+  }
+
   assert(!F.isDeclaration());
   if (F.hasDLLImportStorageClass()) Out << "__declspec(dllimport) ";
   if (F.hasDLLExportStorageClass()) Out << "__declspec(dllexport) ";

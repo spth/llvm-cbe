@@ -156,40 +156,47 @@ static tool_output_file *GetOutputStream(const char *TargetName,
 // main - Entry point for the llc compiler.
 //
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal();
-  PrettyStackTraceProgram X(argc, argv);
 
-  // Enable debug stream buffering.
-  EnableDebugBuffering = true;
+  try {
+    sys::PrintStackTraceOnErrorSignal();
+    PrettyStackTraceProgram X(argc, argv);
 
-  LLVMContext &Context = getGlobalContext();
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
+    // Enable debug stream buffering.
+    EnableDebugBuffering = true;
 
-  // Initialize targets first, so that --version shows registered targets.
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
+    LLVMContext &Context = getGlobalContext();
+    llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
-  LLVMInitializeCBackendTarget();
-  LLVMInitializeCBackendTargetInfo();
-  LLVMInitializeCBackendTargetMC();
+    // Initialize targets first, so that --version shows registered targets.
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmPrinters();
+    InitializeAllAsmParsers();
 
-  // Initialize codegen and IR passes used by llc so that the -print-after,
-  // -print-before, and -stop-after options work.
-  PassRegistry *Registry = PassRegistry::getPassRegistry();
-  initializeCore(*Registry);
-  initializeCodeGen(*Registry);
-  initializeLoopStrengthReducePass(*Registry);
-  initializeLowerIntrinsicsPass(*Registry);
-  initializeUnreachableBlockElimPass(*Registry);
+    LLVMInitializeCBackendTarget();
+    LLVMInitializeCBackendTargetInfo();
+    LLVMInitializeCBackendTargetMC();
 
-  // Register the target printer for --version.
-  cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
+    // Initialize codegen and IR passes used by llc so that the -print-after,
+    // -print-before, and -stop-after options work.
+    PassRegistry *Registry = PassRegistry::getPassRegistry();
+    initializeCore(*Registry);
+    initializeCodeGen(*Registry);
+    initializeLoopStrengthReducePass(*Registry);
+    initializeLowerIntrinsicsPass(*Registry);
+    initializeUnreachableBlockElimPass(*Registry);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+    // Register the target printer for --version.
+    cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  return compileModule(argv, Context);
+    cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+
+    return compileModule(argv, Context);
+  }
+  catch(std::exception const& err) {
+    errs() << argv[0] << ": " << err.what() << "\n";
+    return 1;
+  }
 }
 
 static

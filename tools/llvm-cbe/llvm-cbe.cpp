@@ -76,7 +76,7 @@ TargetTriple("mtriple", cl::desc("Override target triple for module"));
 cl::opt<bool> NoVerify("disable-verify", cl::Hidden,
                        cl::desc("Do not verify input module"));
 
-static int compileModule(char**, LLVMContext&);
+static int compileModule(LLVMContext&);
 
 static
 string stripExtension(string IFN) {
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
 
     cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
-    return compileModule(argv, Context);
+    return compileModule(Context);
   }
   catch(std::exception const& err) {
     errs() << argv[0] << ": " << err.what() << "\n";
@@ -262,7 +262,7 @@ std::unique_ptr<TargetMachine> createMachine(const Target* TheTarget, Triple The
 
 
 static
-int compileModule(char **argv, LLVMContext &Context) {
+int compileModule(LLVMContext &Context) {
   // Load the module to be compiled...
   SMDiagnostic Err;
 
@@ -277,8 +277,8 @@ int compileModule(char **argv, LLVMContext &Context) {
   if (!SkipModule) {
     mod = parseIRFile(InputFilename, Err, Context);
     if (!mod) {
-      Err.print(argv[0], errs());
-      return 1;
+      Err.print("", errs());
+      throw std::runtime_error("parsing failed");
     }
 
     // If we are supposed to override the target triple, do so now.
@@ -322,8 +322,7 @@ int compileModule(char **argv, LLVMContext &Context) {
 
   if (RelaxAll) {
     if (FileType != TargetMachine::CGFT_ObjectFile)
-      errs() << argv[0]
-             << ": warning: ignoring -mc-relax-all because filetype != obj";
+      errs() << ": warning: ignoring -mc-relax-all because filetype != obj";
   }
 
   {
@@ -332,28 +331,22 @@ int compileModule(char **argv, LLVMContext &Context) {
     const PassRegistry *PR = PassRegistry::getPassRegistry();
     if (!StartAfter.empty()) {
       const PassInfo *PI = PR->getPassInfo(StartAfter);
-      if (!PI) {
-        errs() << argv[0] << ": start-after pass is not registered.\n";
-        return 1;
-      }
+      if (!PI)
+        throw std::runtime_error("start-after pass is not registered");
       StartAfterID = PI->getTypeInfo();
     }
     if (!StopAfter.empty()) {
       const PassInfo *PI = PR->getPassInfo(StopAfter);
-      if (!PI) {
-        errs() << argv[0] << ": stop-after pass is not registered.\n";
-        return 1;
-      }
+      if (!PI)
+        throw std::runtime_error("stop-after pass is not registered");
       StopAfterID = PI->getTypeInfo();
     }
 
     // Ask the target to add backend passes as necessary.
     if (Machine->addPassesToEmitFile(PM, Out->os(), FileType, NoVerify,
-                                   StartAfterID, StopAfterID)) {
-      errs() << argv[0] << ": target does not support generation of this"
-             << " file type!\n";
-      return 1;
-    }
+                                   StartAfterID, StopAfterID))
+      throw std::runtime_error(
+          "target does not support generation of this file type");
 
     // Before executing passes, print the final values of the LLVM options.
     cl::PrintOptionValues();

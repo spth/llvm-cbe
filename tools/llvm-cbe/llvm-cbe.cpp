@@ -97,8 +97,7 @@ string stripExtension(string IFN) {
 }
 
 static tool_output_file *GetOutputStream(const char *TargetName,
-                                         Triple::OSType OS,
-                                         const char *ProgName) {
+                                         Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -299,18 +298,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
   assert(mod && "Should have exited after outputting help!");
   TargetMachine &Target = *target.get();
 
-  // Disable .loc support for older OS X versions.
-  if (TheTriple.isMacOSX() &&
-      TheTriple.isMacOSXVersionLT(10, 6)){}
-    //TODO: Find a replacement to this function
-    /* Greg Simpson 6-09-13
-    no member named setMCUseLoc
-    removed statement
-    Target.setMCUseLoc(false);  */
-
   //Jackson Korba 9/30/14
   std::unique_ptr<tool_output_file> Out
-    (GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]));
+    (GetOutputStream(TheTarget->getName(), TheTriple.getOS()));
   if (!Out) return 1;
 
   // Build up all of the passes that we want to do to the module.

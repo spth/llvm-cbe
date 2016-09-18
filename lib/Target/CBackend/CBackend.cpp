@@ -3624,7 +3624,7 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT,
 
   } else {
     // handle FP ops
-    const char *suffix;
+    const char *suffix = nullptr;
     assert(retT == elemT);
     if (elemT->isFloatTy() || elemT->isHalfTy()) {
         suffix = "f";

@@ -42,6 +42,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
+#include <stdexcept>
 using namespace llvm;
 using std::string;
 
@@ -191,7 +192,18 @@ int main(int argc, char **argv) {
   return compileModule(argv, Context);
 }
 
-static int compileModule(char **argv, LLVMContext &Context) {
+static
+const Target* getTarget(Triple TheTriple)
+{
+  string Error;
+  const auto r = TargetRegistry::lookupTarget("c", TheTriple, Error);
+  if (!r)
+    throw std::runtime_error("Can't find target: " + Error);
+  return r;
+}
+
+static
+int compileModule(char **argv, LLVMContext &Context) {
   // Load the module to be compiled...
   SMDiagnostic Err;
 
@@ -224,15 +236,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
   // Get the target specific parser.
-  string Error;
-  // Override MArch
-  MArch = "c";
-  const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
-                                                         Error);
-  if (!TheTarget) {
-    errs() << argv[0] << ": " << Error;
-    return 1;
-  }
+  auto TheTarget = getTarget(TheTriple);
 
   // Package up features to be passed to target/subtarget
   string FeaturesStr;
@@ -272,8 +276,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.StackAlignmentOverride = OverrideStackAlignment;
   Options.PositionIndependentExecutable = EnablePIE;
 
-  //Jackson Korba 9/30/14
-  //OwningPtr<targetMachine>
   std::unique_ptr<TargetMachine>
     target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                           MCPU, FeaturesStr, Options,

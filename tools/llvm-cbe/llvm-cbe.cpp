@@ -236,10 +236,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Package up features to be passed to target/subtarget
   string FeaturesStr;
+
   if (MAttrs.size()) {
     SubtargetFeatures Features;
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
+    for(auto attribute : MAttrs)
+      Features.AddFeature(attribute);
     FeaturesStr = Features.getString();
   }
 

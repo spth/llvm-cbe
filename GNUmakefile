@@ -7,10 +7,12 @@ SRCS:=\
 
 OBJS:=$(SRCS:%.cpp=$(BIN)/%.o)
 
-CXXFLAGS+=$(shell llvm-config --cflags || echo --llvm-was-not-found)
+LLVM_CONFIG?=llvm-config
+
+CXXFLAGS+=$(shell $(LLVM_CONFIG) --cflags || echo --llvm-was-not-found)
 CXXFLAGS+=-fno-rtti
-LIBDIR:=$(shell llvm-config --libdir)
-LIBS:=$(shell llvm-config --libs --system-libs || echo --llvm-was-not-found)
+LIBDIR:=$(shell $(LLVM_CONFIG) --libdir)
+LIBS:=$(shell $(LLVM_CONFIG) --libs --system-libs || echo --llvm-was-not-found)
 
 all: $(BIN)/llvm-cbe
 

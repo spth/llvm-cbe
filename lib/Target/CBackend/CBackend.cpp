@@ -313,6 +313,7 @@ CWriter::printSimpleType(raw_ostream &Out, Type *Ty, bool isSigned) {
     else if (NumBits <= 64)
       return Out << (isSigned?"int64_t":"uint64_t");
     else {
+      UsesInt128 = true;
       assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
       return Out << (isSigned?"int128_t":"uint128_t");
     }
@@ -1436,31 +1437,34 @@ void CWriter::writeOperandWithCast(Value* Operand, ICmpInst &Cmp) {
 // directives to cater to specific compilers as need be.
 //
 static void generateCompilerSpecificCode(raw_ostream& Out,
-                                         const DataLayout *TD) {
+                                         const DataLayout *TD,
+                                         bool UsesInt128, bool UsesAlloca) {
   // Alloca is hard to get, and we don't want to include stdlib.h here.
+  if (UsesAlloca){
   Out << "/* get a declaration for alloca */\n"
-      << "#if defined(__CYGWIN__) || defined(__MINGW32__)\n"
-      << "#define  alloca(x) __builtin_alloca((x))\n"
-      << "#define _alloca(x) __builtin_alloca((x))\n"
-      << "#elif defined(__APPLE__)\n"
-      << "extern void *__builtin_alloca(unsigned long);\n"
-      << "#define alloca(x) __builtin_alloca(x)\n"
-      << "#define longjmp _longjmp\n"
-      << "#define setjmp _setjmp\n"
-      << "#elif defined(__sun__)\n"
-      << "#if defined(__sparcv9)\n"
-      << "extern void *__builtin_alloca(unsigned long);\n"
-      << "#else\n"
-      << "extern void *__builtin_alloca(unsigned int);\n"
-      << "#endif\n"
-      << "#define alloca(x) __builtin_alloca(x)\n"
-      << "#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__arm__)\n"
-      << "#define alloca(x) __builtin_alloca(x)\n"
-      << "#elif defined(_MSC_VER)\n"
-      << "#define alloca(x) _alloca(x)\n"
-      << "#else\n"
-      << "#include <alloca.h>\n"
-      << "#endif\n\n";
+        << "#if defined(__CYGWIN__) || defined(__MINGW32__)\n"
+        << "#define  alloca(x) __builtin_alloca((x))\n"
+        << "#define _alloca(x) __builtin_alloca((x))\n"
+        << "#elif defined(__APPLE__)\n"
+        << "extern void *__builtin_alloca(unsigned long);\n"
+        << "#define alloca(x) __builtin_alloca(x)\n"
+        << "#define longjmp _longjmp\n"
+        << "#define setjmp _setjmp\n"
+        << "#elif defined(__sun__)\n"
+        << "#if defined(__sparcv9)\n"
+        << "extern void *__builtin_alloca(unsigned long);\n"
+        << "#else\n"
+        << "extern void *__builtin_alloca(unsigned int);\n"
+        << "#endif\n"
+        << "#define alloca(x) __builtin_alloca(x)\n"
+        << "#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__arm__)\n"
+        << "#define alloca(x) __builtin_alloca(x)\n"
+        << "#elif defined(_MSC_VER)\n"
+        << "#define alloca(x) _alloca(x)\n"
+        << "#else\n"
+        << "#include <alloca.h>\n"
+        << "#endif\n\n";
+  }
 
   // On Mac OS X, "external weak" is spelled "__attribute__((weak_import))".
   Out << "#if defined(__GNUC__) && defined(__APPLE_CC__)\n"
@@ -1572,62 +1576,64 @@ static void generateCompilerSpecificCode(raw_ostream& Out,
       << "#endif\n\n";
 
   // Output typedefs for 128-bit integers
-  Out << "#if defined(__GNUC__) && defined(__LP64__) /* 128-bit integer types */\n"
-      << "typedef int __attribute__((mode(TI))) int128_t;\n"
-      << "typedef unsigned __attribute__((mode(TI))) uint128_t;\n"
-      << "#define UINT128_C(hi, lo) (((uint128_t)(hi) << 64) | (uint128_t)(lo))\n"
-      << "static inline uint128_t llvm_ctor_u128(uint64_t hi, uint64_t lo) {"
-      << " return UINT128_C(hi, lo); }\n"
-      << "static inline bool llvm_icmp_eq_u128(uint128_t l, uint128_t r) {"
-      << " return l == r; }\n"
-      << "static inline bool llvm_icmp_ne_u128(uint128_t l, uint128_t r) {"
-      << " return l != r; }\n"
-      << "static inline bool llvm_icmp_ule_u128(uint128_t l, uint128_t r) {"
-      << " return l <= r; }\n"
-      << "static inline bool llvm_icmp_sle_i128(int128_t l, int128_t r) {"
-      << " return l <= r; }\n"
-      << "static inline bool llvm_icmp_uge_u128(uint128_t l, uint128_t r) {"
-      << " return l >= r; }\n"
-      << "static inline bool llvm_icmp_sge_i128(int128_t l, int128_t r) {"
-      << " return l >= r; }\n"
-      << "static inline bool llvm_icmp_ult_u128(uint128_t l, uint128_t r) {"
-      << " return l < r; }\n"
-      << "static inline bool llvm_icmp_slt_i128(int128_t l, int128_t r) {"
-      << " return l < r; }\n"
-      << "static inline bool llvm_icmp_ugt_u128(uint128_t l, uint128_t r) {"
-      << " return l > r; }\n"
-      << "static inline bool llvm_icmp_sgt_i128(int128_t l, int128_t r) {"
-      << " return l > r; }\n"
+  if (UsesInt128){
+    Out << "#if defined(__GNUC__) && defined(__LP64__) /* 128-bit integer types */\n"
+        << "typedef int __attribute__((mode(TI))) int128_t;\n"
+        << "typedef unsigned __attribute__((mode(TI))) uint128_t;\n"
+        << "#define UINT128_C(hi, lo) (((uint128_t)(hi) << 64) | (uint128_t)(lo))\n"
+        << "static inline uint128_t llvm_ctor_u128(uint64_t hi, uint64_t lo) {"
+        << " return UINT128_C(hi, lo); }\n"
+        << "static inline bool llvm_icmp_eq_u128(uint128_t l, uint128_t r) {"
+        << " return l == r; }\n"
+        << "static inline bool llvm_icmp_ne_u128(uint128_t l, uint128_t r) {"
+        << " return l != r; }\n"
+        << "static inline bool llvm_icmp_ule_u128(uint128_t l, uint128_t r) {"
+        << " return l <= r; }\n"
+        << "static inline bool llvm_icmp_sle_i128(int128_t l, int128_t r) {"
+        << " return l <= r; }\n"
+        << "static inline bool llvm_icmp_uge_u128(uint128_t l, uint128_t r) {"
+        << " return l >= r; }\n"
+        << "static inline bool llvm_icmp_sge_i128(int128_t l, int128_t r) {"
+        << " return l >= r; }\n"
+        << "static inline bool llvm_icmp_ult_u128(uint128_t l, uint128_t r) {"
+        << " return l < r; }\n"
+        << "static inline bool llvm_icmp_slt_i128(int128_t l, int128_t r) {"
+        << " return l < r; }\n"
+        << "static inline bool llvm_icmp_ugt_u128(uint128_t l, uint128_t r) {"
+        << " return l > r; }\n"
+        << "static inline bool llvm_icmp_sgt_i128(int128_t l, int128_t r) {"
+        << " return l > r; }\n"
 
-      << "#else /* manual 128-bit types */\n"
-      // TODO: field order should be reversed for big-endian
-      << "typedef struct { uint64_t lo; uint64_t hi; } uint128_t;\n"
-      << "typedef uint128_t int128_t;\n"
-      << "#define UINT128_C(hi, lo) {(lo), (hi)}\n" // only use in Static context
-      << "static inline uint128_t llvm_ctor_u128(uint64_t hi, uint64_t lo) {"
-      << " uint128_t r; r.lo = lo; r.hi = hi; return r; }\n"
-      << "static inline bool llvm_icmp_eq_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi == r.hi && l.lo == r.lo; }\n"
-      << "static inline bool llvm_icmp_ne_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi != r.hi || l.lo != r.lo; }\n"
-      << "static inline bool llvm_icmp_ule_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi < r.hi ? 1 : (l.hi == r.hi ? l.lo <= l.lo : 0); }\n"
-      << "static inline bool llvm_icmp_sle_i128(int128_t l, int128_t r) {"
-      << " return (int64_t)l.hi < (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo <= (int64_t)l.lo : 0); }\n"
-      << "static inline bool llvm_icmp_uge_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi > r.hi ? 1 : (l.hi == r.hi ? l.lo >= l.hi : 0); }\n"
-      << "static inline bool llvm_icmp_sge_i128(int128_t l, int128_t r) {"
-      << " return (int64_t)l.hi > (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo >= (int64_t)l.lo : 0); }\n"
-      << "static inline bool llvm_icmp_ult_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi < r.hi ? 1 : (l.hi == r.hi ? l.lo < l.hi : 0); }\n"
-      << "static inline bool llvm_icmp_slt_i128(int128_t l, int128_t r) {"
-      << " return (int64_t)l.hi < (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo < (int64_t)l.lo : 0); }\n"
-      << "static inline bool llvm_icmp_ugt_u128(uint128_t l, uint128_t r) {"
-      << " return l.hi > r.hi ? 1 : (l.hi == r.hi ? l.lo > l.hi : 0); }\n"
-      << "static inline bool llvm_icmp_sgt_i128(int128_t l, int128_t r) {"
-      << " return (int64_t)l.hi > (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo > (int64_t)l.lo : 0); }\n"
-      << "#define __emulate_i128\n"
-      << "#endif\n\n";
+        << "#else /* manual 128-bit types */\n"
+        // TODO: field order should be reversed for big-endian
+        << "typedef struct { uint64_t lo; uint64_t hi; } uint128_t;\n"
+        << "typedef uint128_t int128_t;\n"
+        << "#define UINT128_C(hi, lo) {(lo), (hi)}\n" // only use in Static context
+        << "static inline uint128_t llvm_ctor_u128(uint64_t hi, uint64_t lo) {"
+        << " uint128_t r; r.lo = lo; r.hi = hi; return r; }\n"
+        << "static inline bool llvm_icmp_eq_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi == r.hi && l.lo == r.lo; }\n"
+        << "static inline bool llvm_icmp_ne_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi != r.hi || l.lo != r.lo; }\n"
+        << "static inline bool llvm_icmp_ule_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi < r.hi ? 1 : (l.hi == r.hi ? l.lo <= l.lo : 0); }\n"
+        << "static inline bool llvm_icmp_sle_i128(int128_t l, int128_t r) {"
+        << " return (int64_t)l.hi < (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo <= (int64_t)l.lo : 0); }\n"
+        << "static inline bool llvm_icmp_uge_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi > r.hi ? 1 : (l.hi == r.hi ? l.lo >= l.hi : 0); }\n"
+        << "static inline bool llvm_icmp_sge_i128(int128_t l, int128_t r) {"
+        << " return (int64_t)l.hi > (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo >= (int64_t)l.lo : 0); }\n"
+        << "static inline bool llvm_icmp_ult_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi < r.hi ? 1 : (l.hi == r.hi ? l.lo < l.hi : 0); }\n"
+        << "static inline bool llvm_icmp_slt_i128(int128_t l, int128_t r) {"
+        << " return (int64_t)l.hi < (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo < (int64_t)l.lo : 0); }\n"
+        << "static inline bool llvm_icmp_ugt_u128(uint128_t l, uint128_t r) {"
+        << " return l.hi > r.hi ? 1 : (l.hi == r.hi ? l.lo > l.hi : 0); }\n"
+        << "static inline bool llvm_icmp_sgt_i128(int128_t l, int128_t r) {"
+        << " return (int64_t)l.hi > (int64_t)r.hi ? 1 : (l.hi == r.hi ? (int64_t)l.lo > (int64_t)l.lo : 0); }\n"
+        << "#define __emulate_i128\n"
+        << "#endif\n\n";
+  }
 
   // We output GCC specific attributes to preserve 'linkonce'ness on globals.
   // If we aren't being compiled with GCC, just drop these attributes.
@@ -1764,6 +1770,8 @@ bool CWriter::doFinalization(Module &M) {
   NextAnonValueNumber = 0;
   NextAnonStructNumber = 0;
   NextFunctionNumber = 0;
+  UsesInt128 = false;
+  UsesAlloca = false;
   return true; // may have lowered an IntrinsicCall
 }
 
@@ -1795,7 +1803,7 @@ void CWriter::generateHeader(Module &M) {
   Out << "#ifndef __cplusplus\ntypedef unsigned char bool;\n#endif\n";
   Out << "\n";
 
-  generateCompilerSpecificCode(Out, TD);
+  generateCompilerSpecificCode(Out, TD, UsesInt128, UsesAlloca);
 
   Out << "\n\n/* Support for floating point constants */\n"
       << "typedef uint64_t ConstantDoubleTy;\n"

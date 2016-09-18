@@ -74,6 +74,9 @@ namespace CBackend {
     DenseMap<const Value*, unsigned> AnonValueNumbers;
     unsigned NextAnonValueNumber = 0;
 
+    bool UsesInt128 = false;
+    bool UsesAlloca = false;
+
     /// UnnamedStructIDs - This contains a unique ID for each struct that is
     /// either anonymous or has no name.
     DenseMap<StructType*, unsigned> UnnamedStructIDs;

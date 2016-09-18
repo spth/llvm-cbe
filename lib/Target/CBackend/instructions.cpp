@@ -1275,6 +1275,7 @@ void CWriter::visitAllocaInst(AllocaInst &I) {
     writeOperand(I.getArraySize(), ContextCasted);
   }
   Out << "))";
+  UsesAlloca = true;
 }
 
 void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,

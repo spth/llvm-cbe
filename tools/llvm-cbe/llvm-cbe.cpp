@@ -290,7 +290,7 @@ int compileModule(char **argv, LLVMContext &Context) {
   // Get the target specific parser.
   auto TheTarget = getTarget(TheTriple);
 
-  auto target = createMachine(TheTarget, TheTriple);
+  auto Machine = createMachine(TheTarget, TheTriple);
 
   // If we don't have a module then just exit now. We do this down
   // here since the CPU/Feature help is underneath the target machine
@@ -299,7 +299,6 @@ int compileModule(char **argv, LLVMContext &Context) {
     return 0;
 
   assert(mod && "Should have exited after outputting help!");
-  TargetMachine &Target = *target.get();
 
   //Jackson Korba 9/30/14
   std::unique_ptr<tool_output_file> Out
@@ -314,7 +313,7 @@ int compileModule(char **argv, LLVMContext &Context) {
   PM.add(TLI);
 
   // Add intenal analysis passes from the target machine.
-  PM.add(createTargetTransformInfoWrapperPass(Target.getTargetIRAnalysis()));
+  PM.add(createTargetTransformInfoWrapperPass(Machine->getTargetIRAnalysis()));
 
   if (RelaxAll) {
     if (FileType != TargetMachine::CGFT_ObjectFile)
@@ -344,7 +343,7 @@ int compileModule(char **argv, LLVMContext &Context) {
     }
 
     // Ask the target to add backend passes as necessary.
-    if (Target.addPassesToEmitFile(PM, Out->os(), FileType, NoVerify,
+    if (Machine->addPassesToEmitFile(PM, Out->os(), FileType, NoVerify,
                                    StartAfterID, StopAfterID)) {
       errs() << argv[0] << ": target does not support generation of this"
              << " file type!\n";

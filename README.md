@@ -6,7 +6,7 @@ The resurrected LLVM "C Backend", with improvements.
 GOAL OF THIS FORK
 =================
 
-Ace17's primary goal is to have a backend I can use for this project:
+My primary goal is to have a backend I can use for this project:
 
 Github: https://github.com/Ace17/dscripten
 Blogpost: http://code.alaiwan.org/wp/?p=103
@@ -25,8 +25,7 @@ So my goal here is to have a codebase:
 - that can be compiled out of the LLVM tree (as long as there's one llvm-config in the PATH).
 - that has a trustable suite of tests which directly feed llvm-cbe with deterministic LLVM bitcode (instead of relying on clang code generation, as JuliaComputing/llvm-cbe does).
 - that don't require compromises on code cleanliness.
-
-spth's goal is to have a backend that can output C code used by various C compilers, in partiuclar SDCC (the original C backend tends to output too much GCC/clang/MSVC-specific stuff where stadnard C could be used). The output should be ISO C99, and optionally be able to use ISO C11 features, where available.
+- whose output is standard ISO C99 code, instead of relying on the specifics of some compilers.
 
 INSTALLATION INSTRUCTIONS
 =========================
@@ -65,10 +64,16 @@ $ llvm-config --version
 3.8.0svn
 ```
 
-Step 1b: Alternative to installing LLVM manually
+Step 1b: Install LLVM from repositories
 =======================
 
 Alternatively, a LLVM installed some other way can be used, e.g. installing the Debian packages.
+Be aware that some distributions will suffix the 'llvm-config' program with LLVM version, e.g 'llvm-config-3.8'.
+In this case, you will need to set the environment variable LLVM_CONFIG so the makefile knows which program to call.
+Example:
+```
+$ export LLVM_CONFIG=llvm-config-3.8
+```
 
 Step 2: Compiling LLVM-CBE
 ==========================
@@ -80,14 +85,8 @@ $ git clone https://github.com/JuliaComputing/llvm-cbe.git llvm-cbe
 $ cd llvm-cbe
 ```
 
-If LLVM 3.8 was installed via 1a:
 ```
 $ make
-```
-
-Otherwise (i.e. 1b), make might need to be pointed to the correct llvm-config:
-```
-$ make LLVM_CONFIG=llvm-config-3.8
 ```
 
 Step 3: Usage Examples
@@ -105,12 +104,6 @@ Run the test suite
 ```
 $ ./check
 ```
-
-or
-```
-$ LLVM_CONFIG=llvm-config-3.8 ./check
-```
-
 
 This will trigger the build and run the tests.
 

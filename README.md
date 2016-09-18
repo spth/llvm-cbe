@@ -1,7 +1,7 @@
 llvm-cbe
 ========
 
-resurrected LLVM "C Backend", with improvements
+The resurrected LLVM "C Backend", with improvements.
 
 GOAL OF THIS FORK
 =================
@@ -39,7 +39,7 @@ compiled correctly.
 The library is known to compile on various Linux versions (Redhat,
 Mageia, Ubuntu, Debian), Mac OS X, and Windows (Mingw-w64).
 
-Step 1: Installing LLVM
+Step 1a: Installing LLVM manually
 =======================
 
 LLVM-CBE currently requires LLVM 3.8 to be installed somewhere on your system,
@@ -64,6 +64,11 @@ $ llvm-config --version
 3.8.0svn
 ```
 
+Step 1b: Alternative to installing LLVM manually
+=======================
+
+Alternatively, a LLVM installed some other way can be used, e.g. installing the Debian packages.
+
 Step 2: Compiling LLVM-CBE
 ==========================
 
@@ -72,7 +77,16 @@ Next, download and compile llvm-cbe:
 $ cd $HOME
 $ git clone https://github.com/JuliaComputing/llvm-cbe.git llvm-cbe
 $ cd llvm-cbe
+```
+
+If LLVM 3.8 was installed via 1a:
+```
 $ make
+```
+
+Otherwise (i.e. 1b), make might need to be pointed to the correct llvm-config:
+```
+$ make LLVM_CONFIG=llvm-config-3.8
 ```
 
 Step 3: Usage Examples
@@ -90,5 +104,12 @@ Run the test suite
 ```
 $ ./check
 ```
+
+or
+```
+$ LLVM_CONFIG=llvm-config-3.8 ./check
+```
+
+
 This will trigger the build and run the tests.
 

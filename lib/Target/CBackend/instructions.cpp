@@ -62,12 +62,12 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT,
     printIntrinsicDefinition(devecFunT, Opcode, OpName + "_devec", Out);
   }
 
-  // static __forceinline Rty _llvm_op_ixx(unsigned ixx a, unsigned ixx b) {
+  // static inline Rty _llvm_op_ixx(unsigned ixx a, unsigned ixx b) {
   //   Rty r;
   //   <opcode here>
   //   return r;
   // }
-  Out << "static __forceinline ";
+  Out << "static inline ";
   printTypeName(Out, retT);
   Out << " ";
   Out << OpName;

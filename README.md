@@ -6,7 +6,7 @@ The resurrected LLVM "C Backend", with improvements.
 GOAL OF THIS FORK
 =================
 
-My primary goal is to have a backend I can use for this project:
+Ace17's primary goal is to have a backend I can use for this project:
 
 Github: https://github.com/Ace17/dscripten
 Blogpost: http://code.alaiwan.org/wp/?p=103
@@ -26,6 +26,7 @@ So my goal here is to have a codebase:
 - that has a trustable suite of tests which directly feed llvm-cbe with deterministic LLVM bitcode (instead of relying on clang code generation, as JuliaComputing/llvm-cbe does).
 - that don't require compromises on code cleanliness.
 
+spth's goal is to have a backend that can output C code used by various C compilers, in partiuclar SDCC (the original C backend tends to output too much GCC/clang/MSVC-specific stuff where stadnard C could be used). The output should be ISO C99, and optionally be able to use ISO C11 features, where available.
 
 INSTALLATION INSTRUCTIONS
 =========================

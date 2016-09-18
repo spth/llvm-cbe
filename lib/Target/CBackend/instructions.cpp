@@ -447,16 +447,12 @@ void CWriter::visitUnreachableInst(UnreachableInst &I) {
 }
 
 bool CWriter::isGotoCodeNecessary(BasicBlock *From, BasicBlock *To) {
-  /// FIXME: This should be reenabled, but loop reordering safe!!
-  return true;
-
   if (std::next(Function::iterator(From)) != Function::iterator(To))
     return true;  // Not the direct successor, we need a goto.
 
-  //isa<SwitchInst>(From->getTerminator())
-
-  if (LI->getLoopFor(From) != LI->getLoopFor(To))
+  if (LI->getLoopFor(From) || LI->getLoopFor(To)) // TODO: Allow some cases where LI->getLoopFor(From) != LI->getLoopFor(To), but beware loop reordering!
     return true;
+
   return false;
 }
 

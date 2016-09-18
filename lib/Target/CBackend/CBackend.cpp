@@ -2925,7 +2925,7 @@ void CWriter::printLoop(Loop *L) {
       printLoop(BBLoop);
   }
   Out << "  } while (1); /* end of syntactic loop '"
-      << L->getHeader()->getName() << "' */\n";
+      << L->getHeader()->getName() << "' */\n\n";
 }
 
 void CWriter::printBasicBlock(BasicBlock *BB) {

@@ -92,7 +92,8 @@ string stripExtension(string IFN) {
   }
 }
 
-static tool_output_file *GetOutputStream(const char *TargetName,
+static
+std::unique_ptr<tool_output_file> GetOutputStream(const char *TargetName,
                                          Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
@@ -142,13 +143,10 @@ static tool_output_file *GetOutputStream(const char *TargetName,
   sys::fs::OpenFlags OpenFlags = sys::fs::F_None;
   if (Binary)
     OpenFlags |= sys::fs::F_Text;
-  tool_output_file *FDOut = new tool_output_file(OutputFilename.c_str(), error,
-                                                 OpenFlags);
-  if (error) {
-    errs() << error.message() << '\n';
-    delete FDOut;
-    return 0;
-  }
+  std::unique_ptr<tool_output_file> FDOut(
+      new tool_output_file(OutputFilename, error, OpenFlags));
+  if (error)
+    throw std::runtime_error(error.message());
 
   return FDOut;
 }
@@ -305,10 +303,7 @@ int compileModule(LLVMContext &Context) {
 
   assert(mod && "Should have exited after outputting help!");
 
-  //Jackson Korba 9/30/14
-  std::unique_ptr<tool_output_file> Out
-    (GetOutputStream(TheTarget->getName(), TheTriple.getOS()));
-  if (!Out) return 1;
+  auto Out = GetOutputStream(TheTarget->getName(), TheTriple.getOS());
 
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;

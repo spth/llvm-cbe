@@ -203,6 +203,58 @@ const Target* getTarget(Triple TheTriple)
 }
 
 static
+
+std::unique_ptr<TargetMachine> createMachine(const Target* TheTarget, Triple TheTriple)
+{
+  // Package up features to be passed to target/subtarget
+  string FeaturesStr;
+
+  if (MAttrs.size()) {
+    SubtargetFeatures Features;
+    for(auto attribute : MAttrs)
+      Features.AddFeature(attribute);
+    FeaturesStr = Features.getString();
+  }
+
+  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
+
+  switch (OptLevel) {
+  case ' ': break;
+  case '0': OLvl = CodeGenOpt::None; break;
+  case '1': OLvl = CodeGenOpt::Less; break;
+  case '2': OLvl = CodeGenOpt::Default; break;
+  case '3': OLvl = CodeGenOpt::Aggressive; break;
+  default:
+    throw std::runtime_error("invalid optimization level");
+  }
+
+  TargetOptions Options;
+  Options.LessPreciseFPMADOption = EnableFPMAD;
+  Options.AllowFPOpFusion = FuseFPOps;
+  Options.UnsafeFPMath = EnableUnsafeFPMath;
+  Options.NoInfsFPMath = EnableNoInfsFPMath;
+  Options.NoNaNsFPMath = EnableNoNaNsFPMath;
+  Options.HonorSignDependentRoundingFPMathOption =
+      EnableHonorSignDependentRoundingFPMath;
+  if (FloatABIForCalls != FloatABI::Default)
+    Options.FloatABIType = FloatABIForCalls;
+  Options.NoZerosInBSS = DontPlaceZerosInBSS;
+  Options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
+  Options.StackAlignmentOverride = OverrideStackAlignment;
+  Options.PositionIndependentExecutable = EnablePIE;
+
+  std::unique_ptr<TargetMachine>
+    target(TheTarget->createTargetMachine(TheTriple.getTriple(),
+                                          MCPU, FeaturesStr, Options,
+                                          RelocModel, CMModel, OLvl));
+  if(!target)
+    throw std::runtime_error("could not allocate target machine");
+
+  return target;
+}
+
+
+static
 int compileModule(char **argv, LLVMContext &Context) {
   // Load the module to be compiled...
   SMDiagnostic Err;
@@ -238,49 +290,7 @@ int compileModule(char **argv, LLVMContext &Context) {
   // Get the target specific parser.
   auto TheTarget = getTarget(TheTriple);
 
-  // Package up features to be passed to target/subtarget
-  string FeaturesStr;
-
-  if (MAttrs.size()) {
-    SubtargetFeatures Features;
-    for(auto attribute : MAttrs)
-      Features.AddFeature(attribute);
-    FeaturesStr = Features.getString();
-  }
-
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
-
-  switch (OptLevel) {
-  default:
-    errs() << argv[0] << ": invalid optimization level.\n";
-    return 1;
-  case ' ': break;
-  case '0': OLvl = CodeGenOpt::None; break;
-  case '1': OLvl = CodeGenOpt::Less; break;
-  case '2': OLvl = CodeGenOpt::Default; break;
-  case '3': OLvl = CodeGenOpt::Aggressive; break;
-  }
-
-  TargetOptions Options;
-  Options.LessPreciseFPMADOption = EnableFPMAD;
-  Options.AllowFPOpFusion = FuseFPOps;
-  Options.UnsafeFPMath = EnableUnsafeFPMath;
-  Options.NoInfsFPMath = EnableNoInfsFPMath;
-  Options.NoNaNsFPMath = EnableNoNaNsFPMath;
-  Options.HonorSignDependentRoundingFPMathOption =
-      EnableHonorSignDependentRoundingFPMath;
-  if (FloatABIForCalls != FloatABI::Default)
-    Options.FloatABIType = FloatABIForCalls;
-  Options.NoZerosInBSS = DontPlaceZerosInBSS;
-  Options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
-  Options.StackAlignmentOverride = OverrideStackAlignment;
-  Options.PositionIndependentExecutable = EnablePIE;
-
-  std::unique_ptr<TargetMachine>
-    target(TheTarget->createTargetMachine(TheTriple.getTriple(),
-                                          MCPU, FeaturesStr, Options,
-                                          RelocModel, CMModel, OLvl));
-  assert(target.get() && "Could not allocate target machine!");
+  auto target = createMachine(TheTarget, TheTriple);
 
   // If we don't have a module then just exit now. We do this down
   // here since the CPU/Feature help is underneath the target machine

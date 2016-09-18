@@ -291,6 +291,13 @@ static int compileModule(char **argv, LLVMContext &Context) {
                                           MCPU, FeaturesStr, Options,
                                           RelocModel, CMModel, OLvl));
   assert(target.get() && "Could not allocate target machine!");
+
+  // If we don't have a module then just exit now. We do this down
+  // here since the CPU/Feature help is underneath the target machine
+  // creation.
+  if (SkipModule)
+    return 0;
+
   assert(mod && "Should have exited after outputting help!");
   TargetMachine &Target = *target.get();
 

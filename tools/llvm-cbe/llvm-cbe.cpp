@@ -207,9 +207,9 @@ int main(int argc, char **argv) {
 static int compileModule(char **argv, LLVMContext &Context) {
   // Load the module to be compiled...
   SMDiagnostic Err;
-  
+
   std::unique_ptr<Module> M;
-  
+
   Module *mod = 0;
   Triple TheTriple;
 
@@ -256,7 +256,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     FeaturesStr = Features.getString();
   }
 
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default; 
+  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
 
   switch (OptLevel) {
   default:
@@ -283,7 +283,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
   Options.StackAlignmentOverride = OverrideStackAlignment;
   Options.PositionIndependentExecutable = EnablePIE;
-  
+
   //Jackson Korba 9/30/14
   //OwningPtr<targetMachine>
   std::unique_ptr<TargetMachine>
@@ -310,7 +310,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     removed statement
     Target.setMCUseLoc(false);  */
 
-  //Jackson Korba 9/30/14 
+  //Jackson Korba 9/30/14
   std::unique_ptr<tool_output_file> Out
     (GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]));
   if (!Out) return 1;

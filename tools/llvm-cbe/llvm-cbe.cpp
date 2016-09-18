@@ -259,9 +259,8 @@ int compileModule(char **argv, LLVMContext &Context) {
   // Load the module to be compiled...
   SMDiagnostic Err;
 
-  std::unique_ptr<Module> M;
+  std::unique_ptr<Module> mod;
 
-  Module *mod = 0;
   Triple TheTriple;
 
   bool SkipModule = MCPU == "help" ||
@@ -269,9 +268,8 @@ int compileModule(char **argv, LLVMContext &Context) {
 
   // If user just wants to list available options, skip module loading
   if (!SkipModule) {
-    M = parseIRFile(InputFilename, Err, Context);
-    mod = M.get();
-    if (mod == 0) {
+    mod = parseIRFile(InputFilename, Err, Context);
+    if (!mod) {
       Err.print(argv[0], errs());
       return 1;
     }

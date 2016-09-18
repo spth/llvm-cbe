@@ -32,8 +32,17 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Transforms/Scalar.h"
 
-namespace {
+namespace CBackend {
   using namespace llvm;
+
+  // extra (invalid) Ops tags for tracking unary ops as a special case of the available binary ops
+  enum UnaryOps {
+    BinaryNeg = Instruction::OtherOpsEnd + 1,
+    BinaryNot,
+  };
+
+  std::string getCmpPredicateName(CmpInst::Predicate P);
+  bool isFPIntBitCast(Instruction &I);
 
   class CBEMCAsmInfo : public MCAsmInfo {
   public:

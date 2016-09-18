@@ -3,6 +3,7 @@ BIN?=bin
 SRCS:=\
 	tools/llvm-cbe/llvm-cbe.cpp\
 	lib/Target/CBackend/CBackend.cpp\
+	lib/Target/CBackend/instructions.cpp\
 	lib/Target/CBackend/TargetInfo/CBackendTargetInfo.cpp\
 
 OBJS:=$(SRCS:%.cpp=$(BIN)/%.o)

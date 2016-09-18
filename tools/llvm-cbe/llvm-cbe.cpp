@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 using namespace llvm;
+using std::string;
 
 
 extern "C" void LLVMInitializeCBackendTarget();
@@ -53,10 +54,10 @@ extern "C" void LLVMInitializeCBackendTargetMC();
 // within the corresponding llc passes, and target-specific options
 // and back-end code generation options are specified with the target machine.
 //
-static cl::opt<std::string>
+static cl::opt<string>
 InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
 
-static cl::opt<std::string>
+static cl::opt<string>
 OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"));
 
 static cl::opt<unsigned>
@@ -73,7 +74,7 @@ OptLevel("O",
          cl::ZeroOrMore,
          cl::init(' '));
 
-static cl::opt<std::string>
+static cl::opt<string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
 cl::opt<bool> NoVerify("disable-verify", cl::Hidden,
@@ -81,21 +82,18 @@ cl::opt<bool> NoVerify("disable-verify", cl::Hidden,
 
 static int compileModule(char**, LLVMContext&);
 
-// GetFileNameRoot - Helper function to get the basename of a filename.
-static inline std::string
-GetFileNameRoot(const std::string &InputFilename) {
-  std::string IFN = InputFilename;
-  std::string outputFilename;
+static
+string stripExtension(string IFN) {
+  string outputFilename;
   int Len = IFN.length();
   if ((Len > 2) &&
       IFN[Len-3] == '.' &&
       ((IFN[Len-2] == 'b' && IFN[Len-1] == 'c') ||
        (IFN[Len-2] == 'l' && IFN[Len-1] == 'l'))) {
-    outputFilename = std::string(IFN.begin(), IFN.end()-3); // s/.bc/.s/
+    return string(IFN.begin(), IFN.end()-3); // s/.bc/.s/
   } else {
-    outputFilename = IFN;
+    return IFN;
   }
-  return outputFilename;
 }
 
 static tool_output_file *GetOutputStream(const char *TargetName,
@@ -106,7 +104,7 @@ static tool_output_file *GetOutputStream(const char *TargetName,
     if (InputFilename == "-")
       OutputFilename = "-";
     else {
-      OutputFilename = GetFileNameRoot(InputFilename);
+      OutputFilename = stripExtension(InputFilename);
 
       switch (FileType) {
       case TargetMachine::CGFT_AssemblyFile:
@@ -237,7 +235,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     TheTriple.setTriple(sys::getDefaultTargetTriple());
 
   // Get the target specific parser.
-  std::string Error;
+  string Error;
   // Override MArch
   MArch = "c";
   const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
@@ -248,7 +246,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   }
 
   // Package up features to be passed to target/subtarget
-  std::string FeaturesStr;
+  string FeaturesStr;
   if (MAttrs.size()) {
     SubtargetFeatures Features;
     for (unsigned i = 0; i != MAttrs.size(); ++i)

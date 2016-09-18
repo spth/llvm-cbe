@@ -81,7 +81,7 @@ bool CWriter::isInlinableInst(Instruction &I) const {
   if (isEmptyType(I.getType()) || !I.hasOneUse() ||
       isa<TerminatorInst>(I) || isa<CallInst>(I) || isa<PHINode>(I) ||
       isa<LoadInst>(I) || isa<VAArgInst>(I) || isa<InsertElementInst>(I) ||
-      isa<InsertValueInst>(I))
+      isa<InsertValueInst>(I) || isa<AllocaInst>(I))
     // Don't inline a load across a store or other bad things!
     return false;
 

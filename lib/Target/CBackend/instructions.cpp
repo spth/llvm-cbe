@@ -1368,7 +1368,16 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
 void CWriter::writeMemoryAccess(Value *Operand, Type *OperandType,
                                 bool IsVolatile, unsigned Alignment /*bytes*/) {
   if (isAddressExposed(Operand)) {
-    writeOperandInternal(Operand);
+    if(IsVolatile) {
+      Out << "*((";
+      Out << "volatile ";
+      printTypeName(Out, OperandType, false);
+      Out << "*)&";
+      writeOperandInternal(Operand);
+      Out << ")";
+    }
+    else
+      writeOperandInternal(Operand);
     return;
   }
 

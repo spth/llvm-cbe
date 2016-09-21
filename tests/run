@@ -2,8 +2,13 @@
 
 set -euo pipefail
 
-readonly BIN="$1"
+readonly BIN="${1-}"
 readonly scriptDir=$(dirname $0)
+
+if [ -z "$BIN" ] ; then
+  echo "Usage: $0 <bin>" >&2
+  exit 1;
+fi
 
 readonly tmpDir=/tmp/llvm-cbe-test-$$
 trap "rm -rf $tmpDir" EXIT
@@ -19,6 +24,7 @@ function main
   runTest compile_test function_arguments.ll
   runTest compile_test cyclic_pointers.ll
   runTest compile_test byval_struct.ll
+  runTest compile_test attributes.ll attributes.cpp
 }
 
 function runTest

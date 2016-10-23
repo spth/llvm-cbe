@@ -401,13 +401,20 @@ raw_ostream &CWriter::printStructDeclaration(raw_ostream &Out, StructType *STy) 
   for (auto I = STy->element_begin(), E = STy->element_end(); I != E; ++I, Idx++) {
     Out << "  ";
     bool empty = isEmptyType(*I);
-    if (empty)
-        Out << "/* "; // skip zero-sized types
-    printTypeName(Out, *I, false) << " field" << utostr(Idx);
-    if (empty)
-        Out << " */"; // skip zero-sized types
-    else
-        Out << ";\n";
+
+    if(empty && ((*I)->getTypeID() == Type::ArrayTyID)) {
+      printTypeName(Out, cast<ArrayType>(*I)->getElementType() , false);
+      Out << " field" << utostr(Idx) << "[];";
+    }
+    else {
+      if (empty)
+          Out << "/* "; // skip zero-sized types
+      printTypeName(Out, *I, false) << " field" << utostr(Idx);
+      if (empty)
+          Out << " */"; // skip zero-sized types
+      else
+          Out << ";\n";
+    }
   }
   Out << '}';
   if (STy->isPacked())

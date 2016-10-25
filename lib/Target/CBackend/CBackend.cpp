@@ -238,11 +238,9 @@ string CWriter::getFunctionName(FunctionType *FT, std::pair<AttributeSet, Callin
 string CWriter::getArrayName(ArrayType *AT) {
     string astr;
     raw_string_ostream ArrayInnards(astr);
-    // Arrays are wrapped in structs to allow them to have normal
-    // value semantics (avoiding the array "decay").
     assert(!isEmptyType(AT));
     printTypeName(ArrayInnards, AT->getElementType(), false);
-    return "struct l_array_" + utostr(AT->getNumElements()) + '_' + CBEMangle(ArrayInnards.str());
+    return "l_array_" + utostr(AT->getNumElements()) + '_' + CBEMangle(ArrayInnards.str());
 }
 
 string CWriter::getVectorName(VectorType *VT, bool Aligned) {
@@ -520,11 +518,9 @@ raw_ostream &CWriter::printFunctionProto(raw_ostream &Out, FunctionType *FTy,
 
 raw_ostream &CWriter::printArrayDeclaration(raw_ostream &Out, ArrayType *ATy) {
   assert(!isEmptyType(ATy));
-  // Arrays are wrapped in structs to allow them to have normal
-  // value semantics (avoiding the array "decay").
-  Out << getArrayName(ATy) << " {\n  ";
+  Out << "typedef ";
   printTypeName(Out, ATy->getElementType());
-  Out << " array[" << utostr(ATy->getNumElements()) << "];\n};\n";
+  Out << " " << getArrayName(ATy) << "[" << utostr(ATy->getNumElements()) << "];\n";
   return Out;
 }
 
@@ -1030,7 +1026,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
       Out << "(";
       Context = ContextCasted;
     } else {
-      Out << "{ { "; // Arrays are wrapped in struct types.
+      Out << "{ ";
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Context);
@@ -1046,7 +1042,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
         printConstant(CZ, Context);
       }
     }
-    Out << (Context == ContextStatic ? " } }" : ")"); // Arrays are wrapped in struct types.
+    Out << (Context == ContextStatic ? " }" : ")");
     break;
   }
 
@@ -2637,12 +2633,9 @@ void CWriter::declareOneGlobalVariable(GlobalVariable* I, bool withInitializer) 
       // the compiler figure out the rest of the zeros.
       Out << " = " ;
       if (I->getInitializer()->getType()->isStructTy() ||
-          I->getInitializer()->getType()->isVectorTy()) {
+          I->getInitializer()->getType()->isVectorTy() ||
+          I->getInitializer()->getType()->isArrayTy()) {
         Out << "{ 0 }";
-      } else if (I->getInitializer()->getType()->isArrayTy()) {
-        // As with structs and vectors, but with an extra set of braces
-        // because arrays are wrapped in structs.
-        Out << "{ { 0 } }";
       } else {
         // Just print it out normally.
         writeOperand(I->getInitializer(), ContextStatic);

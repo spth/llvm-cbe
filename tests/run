@@ -25,6 +25,7 @@ function main
   runTest compile_test cyclic_pointers.ll
   runTest compile_test byval_struct.ll
   runTest compile_test attributes.ll attributes.cpp
+  runTest execute_test byval_array.ll
   runTest execute_test floats.ll
 }
 

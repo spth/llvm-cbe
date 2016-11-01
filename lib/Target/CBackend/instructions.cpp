@@ -1342,7 +1342,7 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     if ((*I)->isStructTy()) {
       Out << ".field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
     } else if ((*I)->isArrayTy()) {
-      Out << "[";
+      Out << (isEmptyType(*I) ? "[" : ".array[");
       writeOperandWithCast(I.getOperand(), Instruction::GetElementPtr);
       Out << ']';
     } else if (!(*I)->isVectorTy()) {
@@ -1539,7 +1539,7 @@ void CWriter::visitInsertValueInst(InsertValueInst &IVI) {
                                        makeArrayRef(b, i));
     assert(IndexedTy);
     if (IndexedTy->isArrayTy())
-      Out << "[" << *i << "]";
+      Out << (isEmptyType(IndexedTy) ? "[" : ".array[");
     else
       Out << ".field" << *i;
   }
@@ -1561,7 +1561,7 @@ void CWriter::visitExtractValueInst(ExtractValueInst &EVI) {
         ExtractValueInst::getIndexedType(EVI.getOperand(0)->getType(),
                                          makeArrayRef(b, i));
       if (IndexedTy->isArrayTy())
-        Out << "[" << *i << "]";
+        Out << (isEmptyType(IndexedTy) ? "[" : ".array[") << *i << "]";
       else
         Out << ".field" << *i;
     }

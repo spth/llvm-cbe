@@ -238,9 +238,11 @@ string CWriter::getFunctionName(FunctionType *FT, std::pair<AttributeSet, Callin
 string CWriter::getArrayName(ArrayType *AT) {
     string astr;
     raw_string_ostream ArrayInnards(astr);
+    // Arrays of non-zero length are wrapped in structs to allow them to have normal 
+    // value semantics (avoiding the array "decay").
     assert(!isEmptyType(AT));
     printTypeName(ArrayInnards, AT->getElementType(), false);
-    return "l_array_" + utostr(AT->getNumElements()) + '_' + CBEMangle(ArrayInnards.str());
+    return "struct l_array_" + utostr(AT->getNumElements()) + '_' + CBEMangle(ArrayInnards.str());
 }
 
 string CWriter::getVectorName(VectorType *VT, bool Aligned) {
@@ -401,6 +403,8 @@ raw_ostream &CWriter::printStructDeclaration(raw_ostream &Out, StructType *STy) 
     bool empty = isEmptyType(*I);
 
     if(empty && ((*I)->getTypeID() == Type::ArrayTyID)) {
+      // Flexible array member. Unlike other arrays these are not wrapped in structs
+      // C (at least up to C11) allows flexible array members only in the outermost struct.
       printTypeName(Out, cast<ArrayType>(*I)->getElementType() , false);
       Out << " field" << utostr(Idx) << "[];";
     }
@@ -518,9 +522,11 @@ raw_ostream &CWriter::printFunctionProto(raw_ostream &Out, FunctionType *FTy,
 
 raw_ostream &CWriter::printArrayDeclaration(raw_ostream &Out, ArrayType *ATy) {
   assert(!isEmptyType(ATy));
-  Out << "typedef ";
+  // Arrays of non-zero length are wrapped in structs to allow them to have normal 
+  // value semantics (avoiding the array "decay").
+  Out << getArrayName(ATy) << " {\n  ";
   printTypeName(Out, ATy->getElementType());
-  Out << " " << getArrayName(ATy) << "[" << utostr(ATy->getNumElements()) << "];\n";
+  Out << " array[" << utostr(ATy->getNumElements()) << "];\n};\n";
   return Out;
 }
 
@@ -1026,7 +1032,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
       Out << "(";
       Context = ContextCasted;
     } else {
-      Out << "{ ";
+      Out << "{ { "; // Arrays of non-zero length are wrapped in struct types
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Context);
@@ -1042,7 +1048,7 @@ void CWriter::printConstant(Constant *CPV, enum OperandContext Context) {
         printConstant(CZ, Context);
       }
     }
-    Out << (Context == ContextStatic ? " }" : ")");
+    Out << (Context == ContextStatic ? " } }" : ")"); // Arrays of non-zero length are wrapped in struct types
     break;
   }
 
@@ -2633,9 +2639,12 @@ void CWriter::declareOneGlobalVariable(GlobalVariable* I, bool withInitializer) 
       // the compiler figure out the rest of the zeros.
       Out << " = " ;
       if (I->getInitializer()->getType()->isStructTy() ||
-          I->getInitializer()->getType()->isVectorTy() ||
-          I->getInitializer()->getType()->isArrayTy()) {
+          I->getInitializer()->getType()->isVectorTy()) {
         Out << "{ 0 }";
+      } else if (I->getInitializer()->getType()->isArrayTy()) {
+        // As with structs and vectors, but with an extra set of braces
+        // because arrays of non-zero length are wrapped in structs.
+        Out << "{ { 0 } }";
       } else {
         // Just print it out normally.
         writeOperand(I->getInitializer(), ContextStatic);

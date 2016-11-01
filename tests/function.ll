@@ -1,6 +1,6 @@
-$_Dmain = comdat any
+$get42 = comdat any
 
-define i32 @_Dmain() #0 comdat {
-  ret i32 0
+define i32 @get42() #0 comdat {
+  ret i32 42
 }
 

@@ -20,11 +20,13 @@ function main
   runTest compile_test string_literal.ll
   runTest compile_test string_literal_2.ll
   runTest compile_test struct_initializers.ll
-  runTest compile_test function.ll
+  runTest execute_test function.ll
   runTest compile_test function_arguments.ll
   runTest compile_test cyclic_pointers.ll
   runTest compile_test byval_struct.ll
   runTest compile_test attributes.ll attributes.cpp
+  runTest execute_test byval_array.ll
+  runTest execute_test floats.ll
 }
 
 function runTest
@@ -46,6 +48,27 @@ function compile_test
   if ! gcc -w -O0 -c $tmpDir/output.c -o $tmpDir/output.o ; then
     echo "The resulting program isn't compilable"
     cat $tmpDir/output.c | sed "s/^/  /" | grep -n "" | sed "s/^/> /"
+    return 1
+  fi
+}
+
+function execute_test
+{
+  name=$(basename $1 .ll)
+
+  if ! $BIN/llvm-cbe $scriptDir/$name.ll -o=$tmpDir/output.c ; then
+    echo "C generation failed"
+    return 1
+  fi
+
+  if ! gcc -w -O0 $tmpDir/output.c $scriptDir/$name.c -o $tmpDir/output.exe ; then
+    echo "The resulting program isn't compilable" >&2
+    cat $tmpDir/output.c | sed "s/^/  /" | grep -n "" | sed "s/^/> /"
+    return 1
+  fi
+
+  if ! $tmpDir/output.exe ; then
+    echo "The resulting program returns an error" >&2
     return 1
   fi
 }
